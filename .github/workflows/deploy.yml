@@ -37,6 +37,8 @@ jobs:
         run: |
           echo "=== Building Frontend ==="
           npm run build
+          ls -l dist
+
           echo "✅ Frontend build complete!"
 
       # 6️⃣ Upload dist folder to a temp directory on server
@@ -47,7 +49,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: 'dist/*'
-          target: '/home/ubuntu/credcars-temp-dist'
+          target: '/var/www/app/dist'
+          strip_components: 0
 
       # 7️⃣ Atomic replace and finalize
       - name: Finalize Frontend Deployment

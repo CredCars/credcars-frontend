@@ -5,7 +5,7 @@
       <RouterLink to="/about">About</RouterLink>
     </nav>
     <main>
-      <h1>Welcome to CredCarssssss</h1>
+      <h1>Welcome to CredCare</h1>
       <p>
         This is a starter Vue 3 + TypeScript app powered by Vite. State management with Pinia and
         client-side routing via Vue Router are pre-configured.
