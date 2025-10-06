@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --unsafe-perm --no-audit --no-fund
 
-      # 4️⃣ Run frontend tests (optional)
+      # 4️⃣ Run frontend tests
       - name: Run frontend tests
         run: |
           echo "=== Running Frontend Tests ==="
@@ -39,30 +39,37 @@ jobs:
           npm run build
           echo "✅ Frontend build complete!"
 
-      # 6️⃣ Upload dist folder to temporary location on server
-      - name: Upload Dist to Temp Folder
+      # 6️⃣ Upload dist folder to a temp directory on server
+      - name: Upload Frontend Dist to Server Temp Directory
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ubuntu
           key: ${{ secrets.SERVER_SSH_KEY }}
-          port: 22
           source: 'dist/*'
           target: '/home/ubuntu/credcars-temp-dist'
 
-      # 7️⃣ Move temp dist to production folder with correct permissions
-      - name: Deploy Frontend to Production
+      # 7️⃣ Atomic replace and finalize
+      - name: Finalize Frontend Deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ubuntu
           key: ${{ secrets.SERVER_SSH_KEY }}
-          port: 22
+          timeout: 180s
           script: |
-            echo "=== Deploying Frontend ==="
-            sudo rm -rf /var/www/app/dist
-            sudo mv /home/ubuntu/credcars-temp-dist /var/www/app/dist
+            echo "=== Finalizing Frontend Deployment ==="
+
+            # Remove old dist completely
+            sudo rm -rf /var/www/app/dist/*
+
+            # Move new build into place
+            sudo mv /home/ubuntu/credcars-temp-dist/* /var/www/app/dist/
+
+            # Fix permissions
             sudo chown -R ubuntu:www-data /var/www/app/dist
             sudo chmod -R 755 /var/www/app/dist
+
+            # Reload Nginx to serve the latest build
             sudo systemctl reload nginx
             echo "✅ Frontend deployed successfully!"
