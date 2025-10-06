@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --unsafe-perm --no-audit --no-fund
 
-      # 4️⃣ Run frontend tests
+      # 4️⃣ Run frontend tests (optional)
       - name: Run frontend tests
         run: |
           echo "=== Running Frontend Tests ==="
@@ -37,12 +37,24 @@ jobs:
         run: |
           echo "=== Building Frontend ==="
           npm run build
-          ls -l dist
-
           echo "✅ Frontend build complete!"
 
-      # 6️⃣ Upload dist folder to a temp directory on server
-      - name: Upload Frontend Dist to Server Temp Directory
+      # 6️⃣ Clean old dist folder on server
+      - name: Clean old frontend dist
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 120s
+          script: |
+            sudo rm -rf /var/www/app/dist
+            sudo mkdir -p /var/www/app/dist
+            sudo chown ubuntu:www-data /var/www/app/dist
+            sudo chmod 755 /var/www/app/dist
+
+      # 7️⃣ Upload new dist folder
+      - name: Upload frontend dist to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -50,29 +62,18 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: 'dist/*'
           target: '/var/www/app/dist'
-          strip_components: 0
+          strip_components: 1
 
-      # 7️⃣ Atomic replace and finalize
-      - name: Finalize Frontend Deployment
+      # 8️⃣ Finalize server setup (permissions & reload Nginx)
+      - name: Finalize Frontend Setup
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ubuntu
           key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 180s
+          timeout: 120s
           script: |
-            echo "=== Finalizing Frontend Deployment ==="
-
-            # Remove old dist completely
-            sudo rm -rf /var/www/app/dist/*
-
-            # Move new build into place
-            sudo mv /home/ubuntu/credcars-temp-dist/* /var/www/app/dist/
-
-            # Fix permissions
             sudo chown -R ubuntu:www-data /var/www/app/dist
             sudo chmod -R 755 /var/www/app/dist
-
-            # Reload Nginx to serve the latest build
             sudo systemctl reload nginx
-            echo "✅ Frontend deployed successfully!"
+            echo "✅ Frontend deployed successfully with cache-busting!"
