@@ -35,7 +35,8 @@ jobs:
       # 5️⃣ Build frontend
       - name: Build frontend
         run: |
-          echo "=== Building Frontend ==="
+          echo "=== Building Frontend ==="    
+          echo "VITE_BACKEND_URL=https://api.credcars.com.ng" >> .env
           npm run build
           echo "✅ Frontend build complete!"
 
