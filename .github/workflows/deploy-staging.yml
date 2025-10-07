@@ -1,9 +1,9 @@
-name: Deploy CredCars Frontend
+name: Deploy CredCars Frontend (Staging)
 
 on:
   push:
     branches:
-      - main
+      - dev # deploy staging from dev branch
   workflow_dispatch:
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --unsafe-perm --no-audit --no-fund
 
-      # 4️⃣ Run frontend tests (optional)
+      # 4️⃣ Run frontend tests
       - name: Run frontend tests
         run: |
           echo "=== Running Frontend Tests ==="
@@ -35,37 +35,37 @@ jobs:
       # 5️⃣ Build frontend
       - name: Build frontend
         run: |
-          echo "=== Building Frontend ==="    
-          echo "VITE_BACKEND_URL=https://api.credcars.com.ng" >> .env
+          echo "=== Building Frontend ==="
+          echo "VITE_BACKEND_URL=https://devapi.credcars.com.ng" >> .env
           npm run build
           echo "✅ Frontend build complete!"
 
-      # 6️⃣ Clean old dist folder on server
-      - name: Clean old frontend dist
+      # 6️⃣ Ensure target folder exists on server
+      - name: Prepare staging folder
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 120s
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
-            sudo rm -rf /var/www/app/dist
-            sudo mkdir -p /var/www/app/dist
-            sudo chown ubuntu:www-data /var/www/app/dist
-            sudo chmod 755 /var/www/app/dist
+            sudo rm -rf /var/www/app-staging/dist
+            sudo mkdir -p /var/www/app-staging/dist
+            sudo chown ubuntu:www-data /var/www/app-staging/dist
+            sudo chmod 755 /var/www/app-staging/dist
 
-      # 7️⃣ Upload new dist folder
-      - name: Upload frontend dist to server
+      # 7️⃣ Upload dist folder to staging server
+      - name: Upload Frontend Dist to Staging Server
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: 'dist/*'
-          target: '/var/www/app/dist'
+          target: '/var/www/app-staging/dist'
           strip_components: 1
+          overwrite: true
 
-      # 7️⃣ Reload Nginx on the server
+        # 7️⃣ Reload Nginx on the server
       - name: Reload Nginx
         uses: appleboy/ssh-action@master
         with:
@@ -78,16 +78,16 @@ jobs:
             sudo systemctl reload nginx
             echo "✅ Nginx reloaded successfully!"
 
-      # 8️⃣ Finalize server setup (permissions & reload Nginx)
-      - name: Finalize Frontend Setup
+      # 8️⃣ Finalize frontend setup
+      - name: Finalize Frontend Setup on Staging
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           timeout: 120s
           script: |
-            sudo chown -R ubuntu:www-data /var/www/app/dist
-            sudo chmod -R 755 /var/www/app/dist
+            sudo chown -R ubuntu:www-data /var/www/app-staging/dist
+            sudo chmod -R 755 /var/www/app-staging/dist
             sudo systemctl reload nginx
-            echo "✅ Frontend deployed successfully with cache-busting!"
+            echo "✅ Frontend deployed to staging successfully!"
