@@ -45,7 +45,7 @@ jobs:
         with:
           host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: 'dist/*'
           target: '/var/www/app-staging/dist' # separate folder for staging
 
@@ -55,7 +55,7 @@ jobs:
         with:
           host: ${{ secrets.STAGING_SERVER_HOST }}
           username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           timeout: 120s
           script: |
             sudo chown -R ubuntu:www-data /var/www/app-staging/dist
