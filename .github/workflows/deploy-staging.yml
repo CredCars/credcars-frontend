@@ -1,0 +1,64 @@
+name: Deploy CredCars Frontend (Staging)
+
+on:
+  push:
+    branches:
+      - dev # deploy staging from dev branch
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout frontend code
+      - name: Checkout frontend code
+        uses: actions/checkout@v3
+
+      # 2️⃣ Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # 3️⃣ Install dependencies
+      - name: Install dependencies
+        run: npm ci --unsafe-perm --no-audit --no-fund
+
+      # 4️⃣ Run frontend tests
+      - name: Run frontend tests
+        run: |
+          echo "=== Running Frontend Tests ==="
+          npm run test --if-present
+          echo "✅ Frontend tests passed!"
+
+      # 5️⃣ Build frontend
+      - name: Build frontend
+        run: |
+          echo "=== Building Frontend ==="
+          npm run build
+          echo "✅ Frontend build complete!"
+
+      # 6️⃣ Upload dist folder to staging server
+      - name: Upload Frontend Dist to Staging Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: 'dist/*'
+          target: '/var/www/app-staging/dist' # separate folder for staging
+
+      # 7️⃣ Finalize frontend setup
+      - name: Finalize Frontend Setup on Staging
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 120s
+          script: |
+            sudo chown -R ubuntu:www-data /var/www/app-staging/dist
+            sudo chmod -R 755 /var/www/app-staging/dist
+            sudo systemctl reload nginx
+            echo "✅ Frontend deployed to staging successfully!"
