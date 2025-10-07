@@ -30,7 +30,7 @@ jobs:
         run: |
           echo "=== Running Frontend Tests ==="
           npm run test --if-present
-          echo "✅ Frontend tests passed!"
+          echo "✅ Frontend tests passed! "
 
       # 5️⃣ Build frontend
       - name: Build frontend
