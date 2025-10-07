@@ -1,0 +1,38 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+}
+
+#app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+a {
+  color: #42b883;
+  text-decoration: none;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+main {
+  padding: 1rem 0;
+}
+
+button {
+  background: #42b883;
+  color: #111;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
