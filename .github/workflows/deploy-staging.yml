@@ -39,7 +39,19 @@ jobs:
           npm run build
           echo "✅ Frontend build complete!"
 
-      # 6️⃣ Upload dist folder to staging server
+      # 6️⃣ Ensure target folder exists on server
+      - name: Prepare staging folder
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          script: |
+            sudo mkdir -p /var/www/app-staging/dist
+            sudo chown -R ubuntu:www-data /var/www/app-staging
+            sudo chmod -R 755 /var/www/app-staging
+
+      # 7️⃣ Upload dist folder to staging server
       - name: Upload Frontend Dist to Staging Server
         uses: appleboy/scp-action@master
         with:
@@ -47,9 +59,11 @@ jobs:
           username: ubuntu
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: 'dist/*'
-          target: '/var/www/app-staging/dist' # separate folder for staging
+          target: '/var/www/app-staging/dist'
+          strip_components: 1
+          overwrite: true
 
-      # 7️⃣ Finalize frontend setup
+      # 8️⃣ Finalize frontend setup
       - name: Finalize Frontend Setup on Staging
         uses: appleboy/ssh-action@master
         with:
