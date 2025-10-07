@@ -36,6 +36,7 @@ jobs:
       - name: Build frontend
         run: |
           echo "=== Building Frontend ==="
+          echo "VITE_BACKEND_URL=https://devapi.credcars.com.ng" >> .env
           npm run build
           echo "✅ Frontend build complete!"
 
@@ -47,9 +48,10 @@ jobs:
           username: ubuntu
           key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
+            sudo rm -rf /var/www/app-staging/dist
             sudo mkdir -p /var/www/app-staging/dist
-            sudo chown -R ubuntu:www-data /var/www/app-staging
-            sudo chmod -R 755 /var/www/app-staging
+            sudo chown ubuntu:www-data /var/www/app-staging/dist
+            sudo chmod 755 /var/www/app-staging/dist
 
       # 7️⃣ Upload dist folder to staging server
       - name: Upload Frontend Dist to Staging Server
@@ -62,6 +64,19 @@ jobs:
           target: '/var/www/app-staging/dist'
           strip_components: 1
           overwrite: true
+
+        # 7️⃣ Reload Nginx on the server
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 60s
+          script: |
+            echo "=== Reloading Nginx ==="
+            sudo systemctl reload nginx
+            echo "✅ Nginx reloaded successfully!"
 
       # 8️⃣ Finalize frontend setup
       - name: Finalize Frontend Setup on Staging
