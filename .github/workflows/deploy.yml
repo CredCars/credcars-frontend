@@ -25,11 +25,15 @@ jobs:
       # --- Environment file handling ---
       - name: Use production env
         if: github.ref == 'refs/heads/main'
-        run: cp .env.production .env
+        run: |
+          echo "VITE_BACKEND_URL=${{ vars.PROD_VITE_BACKEND_URL }}" > .env
+          echo "✅ Created .env for production"
 
       - name: Use staging env
         if: github.ref == 'refs/heads/staging'
-        run: cp .env.staging .env
+        run: |
+          echo "VITE_BACKEND_URL=${{ vars.STAGING_VITE_BACKEND_URL }}" > .env
+          echo "✅ Created .env for staging"
 
       # --- Build ---
       - name: Build Vue app
