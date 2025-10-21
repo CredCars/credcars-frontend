@@ -1,93 +1,63 @@
-name: Deploy CredCars Frontend
+name: Deploy Frontend to AWS S3 + CloudFront
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+      - staging
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout frontend code
-      - name: Checkout frontend code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # 2️⃣ Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
-        run: npm ci --unsafe-perm --no-audit --no-fund
+        run: npm ci
 
-      # 4️⃣ Run frontend tests (optional)
-      - name: Run frontend tests
-        run: |
-          echo "=== Running Frontend Tests ==="
-          npm run test --if-present
-          echo "✅ Frontend tests passed! "
+      # --- Environment file handling ---
+      - name: Use production env
+        if: github.ref == 'refs/heads/main'
+        run: cp .env.production .env
 
-      # 5️⃣ Build frontend
-      - name: Build frontend
-        run: |
-          echo "=== Building Frontend ==="    
-          echo "VITE_BACKEND_URL=https://api.credcars.com.ng" >> .env
-          npm run build
-          echo "✅ Frontend build complete!"
+      - name: Use staging env
+        if: github.ref == 'refs/heads/staging'
+        run: cp .env.staging .env
 
-      # 6️⃣ Clean old dist folder on server
-      - name: Clean old frontend dist
-        uses: appleboy/ssh-action@master
+      # --- Build ---
+      - name: Build Vue app
+        run: npm run build
+
+      # --- Deploy to S3 ---
+      - name: Deploy to S3
+        uses: jakejarvis/s3-sync-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 120s
-          script: |
-            sudo rm -rf /var/www/app/dist
-            sudo mkdir -p /var/www/app/dist
-            sudo chown ubuntu:www-data /var/www/app/dist
-            sudo chmod 755 /var/www/app/dist
+          args: --delete
+          bucket: ${{ github.ref == 'refs/heads/main' && vars.PROD_S3_BUCKET || vars.STAGING_S3_BUCKET }}
+          region: ${{ vars.AWS_REGION }}
+          source: ./build
+        env:
+          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ vars.AWS_SECRET_ACCESS_KEY }}
 
-      # 7️⃣ Upload new dist folder
-      - name: Upload frontend dist to server
-        uses: appleboy/scp-action@master
+      # --- Configure AWS credentials ---
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: 'dist/*'
-          target: '/var/www/app/dist'
-          strip_components: 1
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-      # 7️⃣ Reload Nginx on the server
-      - name: Reload Nginx
-        uses: appleboy/ssh-action@master
+      # --- Invalidate CloudFront cache ---
+      - name: Invalidate CloudFront cache
+        uses: chetan/invalidate-cloudfront-action@v2
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 60s
-          script: |
-            echo "=== Reloading Nginx ==="
-            sudo systemctl reload nginx
-            echo "✅ Nginx reloaded successfully!"
-
-      # 8️⃣ Finalize server setup (permissions & reload Nginx)
-      - name: Finalize Frontend Setup
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          timeout: 120s
-          script: |
-            sudo chown -R ubuntu:www-data /var/www/app/dist
-            sudo chmod -R 755 /var/www/app/dist
-            sudo systemctl reload nginx
-            echo "✅ Frontend deployed successfully with cache-busting!"
+          distribution-id: ${{ github.ref == 'refs/heads/main' && vars.PROD_CLOUDFRONT_DISTRIBUTION_ID || vars.STAGING_CLOUDFRONT_DISTRIBUTION_ID }}
+          paths: '/*'
