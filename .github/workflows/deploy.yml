@@ -62,6 +62,9 @@ jobs:
       # --- Invalidate CloudFront cache ---
       - name: Invalidate CloudFront cache
         uses: chetan/invalidate-cloudfront-action@v2
-        with:
-          distribution-id: ${{ github.ref == 'refs/heads/main' && vars.PROD_CLOUDFRONT_DISTRIBUTION_ID || vars.STAGING_CLOUDFRONT_DISTRIBUTION_ID }}
-          paths: '/*'
+        env:
+          DISTRIBUTION: ${{ github.ref == 'refs/heads/main' && vars.PROD_CLOUDFRONT_DISTRIBUTION_ID || vars.STAGING_CLOUDFRONT_DISTRIBUTION_ID }}
+          PATHS: '/*'
+          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
