@@ -47,7 +47,7 @@ jobs:
         env:
           AWS_S3_BUCKET: ${{ github.ref == 'refs/heads/main' && vars.PROD_S3_BUCKET || vars.STAGING_S3_BUCKET }}
           AWS_REGION: ${{ vars.AWS_REGION }}
-          SOURCE_DIR: ./build
+          SOURCE_DIR: ./dist
           AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ vars.AWS_SECRET_ACCESS_KEY }}
 
